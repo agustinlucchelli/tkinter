@@ -1,0 +1,89 @@
+from pynput.mouse import Listener
+from tkinter import *
+import threading, queue
+
+#instancias
+cola = queue.Queue()
+app = Tk()
+
+
+#variables
+Altura = "200"
+Ancho = "200"
+
+app.geometry(f"{Ancho}x{Altura}")
+
+globals()["estado"] = ["", ""]
+    
+    
+#funciones        
+def callback():
+    def run():
+        while True:
+            
+            def OneClick(x, y, boton, presionado):
+    
+                globals()["estado"] = [str(boton).split(".")[1], presionado]
+            
+            with Listener(on_click = OneClick) as List:
+            
+                cola.put(List.join())
+            
+    t=threading.Thread(target=run, args = ())
+    t.start()
+
+
+def tkloop(app : Tk):
+    try:
+        while True:
+            funcion, args, kwargs  = cola.get_nowait()
+            funcion(*args, **kwargs)
+    except:
+        pass
+
+    app.after(100, tkloop, app)
+
+#bloque main   
+globals()["altura_boton"] = 5
+globals()["ancho_boton"] = 5  #esta es la manera en la que se deben establecer las medidas iniciales de los widgets
+globals()["ancho_boton_1"] = 5
+
+boton = Button(width = globals()["ancho_boton"], height = globals()["altura_boton"])
+boton.pack()
+
+boton_1 = Button(width = globals()["ancho_boton"], height = globals()["altura_boton"])
+boton_1.pack()
+
+lista = ["boton", "boton_1"] #aqui tienen que ponerse todos los nombres de los wodgets a edimensionar
+
+#funcion integrada
+def fun(event : Event) -> None:
+                
+    if globals()["estado"][0] == "left" and globals()["estado"][1]:
+        
+        dimensiones = app.winfo_geometry().split("+")[0]
+                
+        globals()["altura"] = dimensiones.split("x")[1]
+        globals()["ancho"] = dimensiones.split("x")[0]
+        
+        print(globals()["ancho_boton"], globals()["altura_boton"])
+        
+        globals()["diferencia_ancho"] = int(globals()["ancho"]) - int(Ancho)
+        globals()["diferencia_altura"] = int(globals()["altura"]) - int(Altura)
+        
+        def redimensiona(widget):
+                    
+            exec(f"""altura_final = int(round((int(globals()["altura_{widget}"]) + int(globals()["diferencia_altura"])/((200/13)*4)), 0))
+ancho_final = int(round((int(globals()["ancho_{widget}"]) + int(globals()["diferencia_ancho"])/((200/28)*4)), 0))
+                    
+{widget}.config(height = altura_final, width = ancho_final)""")
+            
+        list(map(lambda x : redimensiona(x), lista))
+
+#final del bloque main       
+app.bind("<Configure>", fun)
+
+callback()
+tkloop(app)
+
+app.mainloop()
