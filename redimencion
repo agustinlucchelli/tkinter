@@ -6,15 +6,17 @@ import threading, queue
 cola = queue.Queue()
 app = Tk()
 
-
 #variables
 Altura = "200"
 Ancho = "200"
-
 app.geometry(f"{Ancho}x{Altura}")
 
 globals()["estado"] = ["", ""]
-    
+globals()["suma_alturas"] = []
+globals()['modificados'] = []
+globals()["altura"] = 0
+globals()["ancho"] = 0
+globals()["count"] = 0
     
 #funciones        
 def callback():
@@ -29,8 +31,123 @@ def callback():
             
                 cola.put(List.join())
             
-    t=threading.Thread(target=run, args = ())
+    t = threading.Thread(target=run, args = ())
     t.start()
+
+
+def tkloop(app : Tk):
+    try:
+        while True:
+            funcion, args, kwargs  = cola.get_nowait()
+            funcion(*args, **kwargs)
+    except:
+        pass
+
+    app.after(100, tkloop, app)
+
+#bloque main   
+globals()["altura_boton"] = 1
+globals()["ancho_boton"] = 5  #esta es la manera en la que se deben establecer las medidas iniciales de los widgets
+globals()["ancho_boton_1"] = 5
+globals()["altura_boton_1"] = 1
+globals()["ancho_boton_2"] = 5
+globals()["altura_boton_2"] = 1
+
+boton = Button(width = globals()["ancho_boton"], height = globals()["altura_boton"])
+boton.pack()
+
+boton_1 = Button(width = globals()["ancho_boton_1"], height = globals()["altura_boton_1"])
+boton_1.pack()
+
+boton_2 = Button(width = globals()["ancho_boton_2"], height = globals()["altura_boton_2"])
+boton_2.pack()
+
+
+lista = ["boton", "boton_1", "boton_2"] #aqui tienen que ponerse todos los nombres de los wodgets a edimensionar
+
+#funcion integrada
+def fun(event : Event) -> None:
+                
+    if globals()["estado"][0] == "left" and globals()["estado"][1]:
+        
+        dimensiones = app.winfo_geometry().split("+")[0]
+        
+        globals()["diferencial_altura"] = int(globals()["altura"]) - int(dimensiones.split("x")[1])
+                
+        globals()["altura"] = dimensiones.split("x")[1]
+        globals()["ancho"] = dimensiones.split("x")[0]
+
+        
+        globals()["diferencia_ancho"] = int(globals()["ancho"]) - int(Ancho)
+        globals()["diferencia_altura"] = int(globals()["altura"]) - int(Altura)
+        
+        def redimensiona(widget):
+                    
+            exec(f"""altura_final = int(round((int(globals()["altura_{widget}"]) + int(globals()["diferencia_altura"])/((200/13)*4)), 0))
+                 
+ancho_final = int(round((int(globals()["ancho_{widget}"]) + int(globals()["diferencia_ancho"])/((200/28)*4)), 0))
+
+if ancho_final < 1:
+    ancho_final = 1
+    
+if altura_final < 1:
+    altura_final = 1
+
+globals()['suma_alturas'].append(int({widget}.winfo_geometry().split('+')[2]) + altura_final*26)
+
+{widget}.config(height = altura_final, width = ancho_final)""")
+            
+        list(map(lambda x : redimensiona(x), lista))
+        if int(globals()["altura"]) < (sorted(globals()["suma_alturas"])[-1]) and int(globals()["altura"]) > 26:
+            
+            globals()["count"] += 1
+            
+            exec(f"globals()['posicion_x'] = int({lista[globals()['suma_alturas'].index(max(globals()['suma_alturas']))]}.winfo_geometry().split('+')[1])")
+            
+            if globals()["posicion_x"] > 0:
+                
+                exec(f"{lista[globals()['suma_alturas'].index(max(globals()['suma_alturas']))]}.pack_forget()")
+                
+                if globals()["count"] == 2:
+                    exec(f"sobrante = int(app.winfo_width())/2 - int({lista[0]}.winfo_width())")
+                    exec(f"ancho_ = int({lista[globals()['suma_alturas'].index(max(globals()['suma_alturas']))]}.winfo_width()) - sobrante")
+                    exec(f"""                    
+if ancho_ < 0:
+    globals()['parm'] = int(app.winfo_width())/2 + int({lista[0]}.winfo_width())/2
+else:
+    globals()['parm'] = 0
+    """)
+        
+                elif globals()["count"] == 1:
+
+                    globals()['parm'] = 0
+
+
+                    
+                exec(f"{lista[globals()['suma_alturas'].index(max(globals()['suma_alturas']))]}.place(x = {globals()['parm']}, y = 0)")
+                exec(f"{globals()['modificados'].append(lista[globals()['suma_alturas'].index(max(globals()['suma_alturas']))])}")
+                
+        if int(globals()["diferencia_altura"]) - 26 == max(globals()['suma_alturas']) - (200 + int(globals()["diferencial_altura"]))  and int(globals()['diferencial_altura']) < 0:
+
+            try:
+                exec(f"{globals()['modificados'][-1]}.pack()")
+                globals()["modificados"].pop(-1)
+            except Exception as e:
+                print(e)
+            
+            
+                
+                
+                
+        list(map(lambda x : globals()["suma_alturas"].pop(0), range(len(globals()["suma_alturas"]))))
+
+#final del bloque main       
+app.bind("<Configure>", fun)
+
+callback()
+tkloop(app)
+
+app.mainloop()
 
 
 def tkloop(app : Tk):
